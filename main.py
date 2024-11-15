@@ -1,7 +1,7 @@
 # FastAPI server
 from fastapi import FastAPI
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 
 app = FastAPI()
@@ -26,3 +26,14 @@ def feedback(message_id: str):
     db["sent_emails"].delete_one({"_id": ObjectId(message_id)})
 
     return {"message": "Feedback added to message"}
+
+
+def validity_check():
+    # move all messages sent more than 14 days ago to the not_clicked collection
+    not_clicked = db["sent_emails"].find(
+        {"sent_at": {"$lt": datetime.now() - timedelta(days=14)}}
+    )
+    for message in not_clicked:
+        db["not_clicked"].insert_one(message)
+        db["sent_emails"].delete_one({"_id": message["_id"]})
+    return {"message": "Validity check completed"}
